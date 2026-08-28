@@ -75,6 +75,28 @@ def _fmt_belegupload(result: dict) -> str:
     return "\n".join(lines)
 
 
+def _fmt_one_document(d: dict) -> list[str]:
+    files = ", ".join(f["name"] for f in d["files"]) if d["files"] else "(kein Dateiname)"
+    date = d["creationDate"] or "?"
+    amount = f"{d['amount']} EUR" if d.get("amount") else "kein Betrag erkannt"
+    acc = d.get("accounting") or {}
+    booking = ""
+    if acc.get("account") or acc.get("postingText"):
+        kind = "Vorschlag" if acc.get("proposal") else "verbucht"
+        booking = (
+            f" | Konto {acc.get('account') or '?'} -> {acc.get('contraAccount') or '?'}"
+            f" \"{acc.get('postingText') or ''}\" ({kind})"
+        )
+    lines = [f"  [{d['view']:<7}] {d['state']:<10} {date}  {files}  ({amount}){booking}"]
+    if d.get("comment"):
+        lines.append(f"    Kommentar: {d['comment']}")
+    if d.get("ocr"):
+        ocr_str = ", ".join(f"{k}={v}" for k, v in d["ocr"].items())
+        lines.append(f"    OCR: {ocr_str}")
+    lines.append(f"    documentIdent: {d['documentIdent']}")
+    return lines
+
+
 def _fmt_documents(result: dict) -> str:
     mandant = result["mandant"]
     folder = result["folder"]
@@ -83,26 +105,16 @@ def _fmt_documents(result: dict) -> str:
     if not docs:
         lines.append("  (keine Belege gefunden)")
     for d in docs:
-        files = ", ".join(f["name"] for f in d["files"]) if d["files"] else "(kein Dateiname)"
-        date = d["creationDate"] or "?"
-        amount = f"{d['amount']} EUR" if d.get("amount") else "kein Betrag erkannt"
-        acc = d.get("accounting") or {}
-        booking = ""
-        if acc.get("account") or acc.get("postingText"):
-            kind = "Vorschlag" if acc.get("proposal") else "verbucht"
-            booking = (
-                f" | Konto {acc.get('account') or '?'} -> {acc.get('contraAccount') or '?'}"
-                f" \"{acc.get('postingText') or ''}\" ({kind})"
-            )
-        lines.append(f"  [{d['view']:<7}] {d['state']:<10} {date}  {files}  ({amount}){booking}")
-        if d.get("comment"):
-            lines.append(f"    Kommentar: {d['comment']}")
-        if d.get("ocr"):
-            ocr_str = ", ".join(f"{k}={v}" for k, v in d["ocr"].items())
-            lines.append(f"    OCR: {ocr_str}")
-        lines.append(f"    documentIdent: {d['documentIdent']}")
+        lines.extend(_fmt_one_document(d))
     for state, err in result.get("errors", {}).items():
         lines.append(f"  ⚠ {state}: {err} (z. B. fehlendes Recht MANAGE_DOC_ARCHIVE)")
+    return "\n".join(lines)
+
+
+def _fmt_show_document(result: dict) -> str:
+    mandant = result["mandant"]
+    lines = [f"Beleg in {mandant['name']} ({mandant['number']}):"]
+    lines.extend(_fmt_one_document(result))
     return "\n".join(lines)
 
 
@@ -129,6 +141,7 @@ _HUMAN_FORMATTERS = {
     "list-mandants": _fmt_mandators,
     "list-folders": _fmt_folders,
     "list-documents": _fmt_documents,
+    "show-document": _fmt_show_document,
     "belegupload": _fmt_belegupload,
     "download-document": _fmt_download,
     "edit-document": _fmt_edit_document,
@@ -283,6 +296,34 @@ def _doc_summary(doc: dict, view: str) -> dict:
         "amount": (accounting or {}).get("grossAmount") or (ocr_summary or {}).get("grossAmount"),
         "accounting": accounting,
         "ocr": ocr_summary,
+    }
+
+
+# Status -> Bearbeitungsschritt-Gruppe (siehe DigibelService-Stategruppen im
+# Frontend: draft="Belegseiten ordnen", edit="Prüfen und Zahlen",
+# archive=bereitgestellt/abgeholt/verbucht).
+_STATE_TO_VIEW = {
+    "NEW": "draft",
+    "DRAFT": "draft",
+    "CONVERSION_FAILED": "draft",
+    "OCR_IN_PROGRESS": "draft",
+    "OCR_FINISHED": "edit",
+    "OCR_SKIPPED": "edit",
+    "VERIFIED": "edit",
+    "PROVIDED": "archive",
+    "FETCHED": "archive",
+    "BOOKED": "archive",
+}
+
+
+def _cmd_show_document(client: AgendaClient, args: argparse.Namespace) -> dict:
+    mandator = client.find_mandator(args.mandant)
+    doc = client.get_document(mandator.id, args.document)
+    view = _STATE_TO_VIEW.get(doc.get("state"), "?")
+    summary = _doc_summary(doc, view)
+    return {
+        "mandant": {"id": mandator.id, "number": mandator.number, "name": mandator.name},
+        **summary,
     }
 
 
@@ -483,6 +524,18 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     ld.set_defaults(func=_cmd_list_documents)
+
+    # show-document
+    sd = sub.add_parser(
+        "show-document",
+        parents=[common],
+        help="Einen einzelnen Beleg per documentIdent anzeigen (Kommentar, Buchung, OCR).",
+    )
+    sd.add_argument("--mandant", required=True, help="Mandant: Nummer, Name oder UUID.")
+    sd.add_argument(
+        "--document", required=True, help="documentIdent des Belegs (siehe list-documents)."
+    )
+    sd.set_defaults(func=_cmd_show_document)
 
     # download-document
     dd = sub.add_parser(

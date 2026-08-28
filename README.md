@@ -47,6 +47,11 @@ TOTP-Code fällig wird.
 # und von der OCR erkannte Rohdaten (USt-ID, Kundennummer, IBAN, Gegenpartei, ...)
 .venv/bin/python -m agenda list-documents --mandant 12345 --folder Rechnungseingang --json
 
+# Einen einzelnen Beleg direkt per documentIdent anzeigen (ohne den ganzen
+# Ordner zu durchsuchen) - dieselben Infos wie oben, nur für einen Beleg
+.venv/bin/python -m agenda show-document --mandant 12345 \
+    --document a1b2c3d4-5e6f-7890-abcd-ef1234567890 --json
+
 # Original-Datei(en) eines oder mehrerer Belege herunterladen (documentIdent aus list-documents)
 # Bei mehreren Belegen ist --out zwingend ein Verzeichnis, Namenskollisionen
 # bekommen automatisch ein "-2"/"-3"-Suffix statt überschrieben zu werden.
