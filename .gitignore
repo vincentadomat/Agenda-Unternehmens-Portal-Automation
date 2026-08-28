@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+tokens.json
+HARs/
+samples/
+.DS_Store
