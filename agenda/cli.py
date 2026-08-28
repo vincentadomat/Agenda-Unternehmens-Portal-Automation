@@ -97,6 +97,9 @@ def _fmt_documents(result: dict) -> str:
         lines.append(f"  [{d['view']:<7}] {d['state']:<10} {date}  {files}  ({amount}){booking}")
         if d.get("comment"):
             lines.append(f"    Kommentar: {d['comment']}")
+        if d.get("ocr"):
+            ocr_str = ", ".join(f"{k}={v}" for k, v in d["ocr"].items())
+            lines.append(f"    OCR: {ocr_str}")
         lines.append(f"    documentIdent: {d['documentIdent']}")
     for state, err in result.get("errors", {}).items():
         lines.append(f"  ⚠ {state}: {err} (z. B. fehlendes Recht MANAGE_DOC_ARCHIVE)")
@@ -240,10 +243,34 @@ def _file_summary(f: dict) -> dict:
     return {"name": f.get("name"), "md5": source.get("md5")}
 
 
+def _ocr_summary(doc: dict) -> Optional[dict]:
+    """Von der Texterkennung (OCR) direkt aus dem Beleg gelesene Rohdaten
+    (`ocrValues`) - unabhängig vom (ggf. manuell angepassten) Buchungsvorschlag
+    in `accountingRecord`. Leere Felder werden weggelassen."""
+    ocr = doc.get("ocrValues") or {}
+    fields = {
+        "counterpartName": ocr.get("counterpartName"),
+        "addresser": ocr.get("addresser"),
+        "invoiceNumber": ocr.get("number"),
+        "invoiceDate": ocr.get("invoiceDate"),
+        "deliveryDate": ocr.get("deliveryDate"),
+        "netAmount": ocr.get("netAmount"),
+        "grossAmount": ocr.get("grossAmount"),
+        "taxId": ocr.get("taxId"),
+        "taxNumber": ocr.get("taxNumber"),
+        "customerNumber": ocr.get("customerNumber"),
+        "iban": next((v for v in [ocr.get(f"iban{i}") for i in range(4)] if v), None),
+        "discount": ocr.get("discount"),
+        "discountType": ocr.get("discountType"),
+    }
+    result = {k: v for k, v in fields.items() if v}
+    return result or None
+
+
 def _doc_summary(doc: dict, view: str) -> dict:
     files = doc.get("file") or []
     accounting = _accounting_summary(doc)
-    ocr = doc.get("ocrValues") or {}
+    ocr_summary = _ocr_summary(doc)
     return {
         "documentIdent": doc.get("documentIdent") or doc.get("id"),
         "view": view,
@@ -253,8 +280,9 @@ def _doc_summary(doc: dict, view: str) -> dict:
         "files": [_file_summary(f) for f in files if isinstance(f, dict)],
         "creationDate": _epoch_ms_to_iso(doc.get("creationDate")),
         "comment": doc.get("notice") or None,
-        "amount": (accounting or {}).get("grossAmount") or ocr.get("grossAmount") or None,
+        "amount": (accounting or {}).get("grossAmount") or (ocr_summary or {}).get("grossAmount"),
         "accounting": accounting,
+        "ocr": ocr_summary,
     }
 
 

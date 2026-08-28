@@ -43,7 +43,8 @@ TOTP-Code fällig wird.
 .venv/bin/python -m agenda list-folders --mandant 12345 --json
 
 # Belege eines Ordners auflisten (--state draft|edit|archive|all, Default: all)
-# inkl. Betrag, Konto/Gegenkonto, Buchungstext, Vorschlag-oder-verbucht (sofern vorhanden)
+# inkl. Betrag, Konto/Gegenkonto, Buchungstext, Vorschlag-oder-verbucht, Kommentar
+# und von der OCR erkannte Rohdaten (USt-ID, Kundennummer, IBAN, Gegenpartei, ...)
 .venv/bin/python -m agenda list-documents --mandant 12345 --folder Rechnungseingang --json
 
 # Original-Datei(en) eines oder mehrerer Belege herunterladen (documentIdent aus list-documents)
