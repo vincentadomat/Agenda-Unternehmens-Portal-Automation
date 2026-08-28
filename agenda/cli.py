@@ -390,10 +390,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=NEXT_STEP_SORT,
         help=(
             "Folgeschritt nach dem Upload (Default: SORT_DOCUMENT = "
-            "'Belegseiten ordnen', sicher/rückholbar). "
-            "VERIFY_AND_PAY ('Prüfen und Zahlen') und PROVIDE_DOCUMENT "
-            "(direkt an den Buchhalter übermitteln, landet im Belegarchiv) "
-            "sind von unserer Seite NICHT mehr rückholbar - bewusst wählen!"
+            "'Belegseiten ordnen'). Aus SORT_DOCUMENT und VERIFY_AND_PAY "
+            "('Pruefen und Zahlen') kann der Beleg noch geloescht werden. "
+            "Erst PROVIDE_DOCUMENT (direkt an den Buchhalter uebermitteln, "
+            "landet im Belegarchiv) ist von unserer Seite endgueltig fix "
+            "- bewusst waehlen!"
         ),
     )
     up.add_argument(

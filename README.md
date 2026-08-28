@@ -4,7 +4,7 @@ Automatisierter Zugriff auf das **Agenda Unternehmensportal**, um Belege
 programmatisch hochzuladen und an den Buchhalter zu übermitteln – ohne die
 Web-Oberfläche zu bedienen.
 
-Ergebnis der Reverse-Engineering-Analyse (HARs unter `HARs/`):
+Ergebnis der Reverse-Engineering-Analyse:
 
 - **Auth:** Keycloak OIDC Authorization-Code-Flow mit **PKCE (S256)**,
   Realm `kunden`, Client `unpmobil`, Zweitfaktor per **TOTP**.
@@ -100,14 +100,15 @@ Bearbeitungsschritt der Beleg wandert:
 | Wert | Bedeutung | Rückholbar? |
 |---|---|---|
 | `SORT_DOCUMENT` (Default) | "Belegseiten ordnen" | ✅ ja |
-| `VERIFY_AND_PAY` | "Prüfen und Zahlen" | ❌ nein |
+| `VERIFY_AND_PAY` | "Prüfen und Zahlen" | ✅ ja – von dort kann der Beleg noch gelöscht werden |
 | `PROVIDE_DOCUMENT` | direkt an den Buchhalter übermitteln (Belegarchiv, Status "bereitgestellt") | ❌ nein |
 
-Aus `VERIFY_AND_PAY` und `PROVIDE_DOCUMENT` kann ein Beleg von unserer
-(Mandanten-)Seite **nicht mehr zurückgeholt** werden – `PROVIDE_DOCUMENT`
-übermittelt ihn sofort an den Buchhalter, **auch mit gesetztem `--no-notify`**.
-Für Tests unbedingt beim sicheren Default `SORT_DOCUMENT` bleiben und
-`PROVIDE_DOCUMENT` nur bewusst und absichtlich verwenden.
+Erst ab `PROVIDE_DOCUMENT` ist ein Beleg von der (Mandanten-)Seite aus
+**endgültig fix** – er wird sofort an den Buchhalter übermittelt, **auch mit
+gesetztem `--no-notify`**. Aus `SORT_DOCUMENT` und `VERIFY_AND_PAY` kann ein
+Beleg dagegen noch gelöscht werden. Für Tests unbedingt beim sicheren Default
+`SORT_DOCUMENT` bleiben und `PROVIDE_DOCUMENT` nur bewusst und absichtlich
+verwenden.
 
 Bei `--json` gibt es ausschließlich JSON auf **stdout** (Statusmeldungen und
 Fehler laufen über stderr), Exit-Code `!= 0` bei Fehlern – ideal zum Parsen.

@@ -30,14 +30,13 @@ from . import register
 # schritt/Tab der Beleg nach dem Upload verschoben wird – DAS ist der
 # eigentliche Sicherheits-Schalter, NICHT --no-notify (siehe unten)!
 #
-# ACHTUNG Irreversibilität: Aus VERIFY_AND_PAY und PROVIDE_DOCUMENT kann ein
-# Beleg von unserer (Mandanten-)Seite NICHT mehr in einen vorherigen Status
-# zurückgeholt werden. PROVIDE_DOCUMENT übermittelt den Beleg sofort an den
-# Buchhalter (Status "bereitgestellt", landet im Belegarchiv) – unabhängig
-# davon, ob zusätzlich --no-notify gesetzt ist. Nur SORT_DOCUMENT ist der
-# harmlose, jederzeit korrigierbare Schritt ("Belegseiten ordnen").
+# ACHTUNG Irreversibilität: Erst PROVIDE_DOCUMENT ist von unserer (Mandanten-)
+# Seite endgültig fix - übermittelt den Beleg sofort an den Buchhalter
+# (Status "bereitgestellt", landet im Belegarchiv), unabhängig davon, ob
+# zusätzlich --no-notify gesetzt ist. Aus SORT_DOCUMENT und VERIFY_AND_PAY
+# kann ein Beleg dagegen noch gelöscht werden (laut Nutzerangabe).
 NEXT_STEP_SORT = "SORT_DOCUMENT"        # sicher: Beleg landet in "Belegseiten ordnen"
-NEXT_STEP_VERIFY = "VERIFY_AND_PAY"     # NICHT rückholbar: "Prüfen und Zahlen"
+NEXT_STEP_VERIFY = "VERIFY_AND_PAY"     # noch löschbar: "Prüfen und Zahlen"
 NEXT_STEP_PROVIDE = "PROVIDE_DOCUMENT"  # NICHT rückholbar: direkt an Buchhalter übermitteln
 VALID_NEXT_STEPS = {NEXT_STEP_SORT, NEXT_STEP_VERIFY, NEXT_STEP_PROVIDE}
 # Kein NEXT_STEP_NONE: "NONE" ist im Frontend nur ein rein clientseitiger
