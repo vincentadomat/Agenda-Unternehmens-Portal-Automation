@@ -134,6 +134,22 @@ Das CLI ist der Integrationspunkt. Zwei Wege:
    Datei(en) entgegen und ruft das CLI auf. So können andere Scripts den Upload
    per HTTP anstoßen und dabei Mandant + Funktion + Ordner übergeben.
 
+## Beleg freigeben (`provide-document`)
+
+Für bereits hochgeladene Belege (z. B. nach Kommentar/Buchungsvorschlag per
+`edit-document`) – live verifiziert (2026-08-28) an einer echten Rechnung:
+
+```bash
+.venv/bin/python -m agenda provide-document --mandant 12345 --folder Rechnungseingang \
+  --document a1b2c3d4-5e6f-7890-abcd-ef1234567890
+```
+
+Übermittelt die genannten Belege sofort an den Buchhalter (`state` wechselt zu
+`PROVIDED`) – **endgültig, nicht rückholbar**, genau wie `--next-step
+PROVIDE_DOCUMENT` beim Upload. Belege, die bereits final sind (`PROVIDED`,
+`FETCHED`, `BOOKED`, `DELETED`), werden vorher erkannt und übersprungen statt
+einen Fehler zu werfen. Mehrere `--document`-Werte auf einmal möglich.
+
 ## Kommentar & Buchungsvorschlag (`edit-document`)
 
 `edit-document` lädt den aktuellen Beleg (inkl. `optlock` für optimistisches
@@ -145,15 +161,12 @@ Nicht angegebene Felder bleiben unverändert.
 frühere Fehlannahme:** `--verify` setzt den Status auf `VERIFIED` ("geprüft"),
 bleibt aber weiterhin im Bereich "Prüfen und Zahlen" – **kein** Freigabe-Schritt,
 der Beleg wird dadurch **nicht** an den Buchhalter übermittelt/ins Belegarchiv
-verschoben. `--unverify` setzt einen so markierten Beleg wieder zurück auf
-`OCR_FINISHED` – im Web-Frontend nicht möglich, über die REST-API aber
-problemlos.
+verschoben. `--unverify` setzt einen so markierten Beleg per API wieder zurück
+auf `OCR_FINISHED` (das geht auch im Web-Frontend).
 
-Der tatsächliche Freigabe-Schritt läuft weiterhin nur über
-`--next-step PROVIDE_DOCUMENT` beim **Upload**. Für bereits hochgeladene
-Belege gibt es dafür noch keinen Befehl in diesem Tool – der dafür in Frage
-kommende Endpunkt (`forward-by-ids`) ist nur aus dem Frontend-Code abgeleitet,
-nicht durch eine HAR-Aufnahme bestätigt.
+Der tatsächliche Freigabe-Schritt für bereits hochgeladene Belege ist
+**`provide-document`** (siehe eigener Abschnitt weiter oben) – live
+verifiziert an einer echten Rechnung.
 
 **Live verifiziert (2026-08-28), was auf welchem Beleg-Status funktioniert:**
 
@@ -210,6 +223,10 @@ IDENT=$(.venv/bin/python -m agenda list-documents --mandant 12345 --folder Rechn
 
 .venv/bin/python -m agenda edit-document --mandant 12345 --document "$IDENT" \
   --comment "Bitte auf Konto 4400 buchen" --account 4400 --posting-text "Wareneinkauf"
+
+# 3. Optional: direkt freigeben (endgültig, nicht rückholbar)
+.venv/bin/python -m agenda provide-document --mandant 12345 --folder Rechnungseingang \
+  --document "$IDENT"
 ```
 
 Für n8n: dieselben zwei (bzw. drei, mit einem kleinen Function-Node fürs

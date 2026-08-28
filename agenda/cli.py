@@ -137,10 +137,22 @@ def _fmt_edit_document(result: dict) -> str:
     return "\n".join(lines)
 
 
+def _fmt_provide_document(result: dict) -> str:
+    lines = [f"Ordner: {result['folder']['name']} ({result['mandant']['name']})"]
+    for ident in result.get("forwarded", []):
+        lines.append(f"  ✓ {ident} an Buchhalter freigegeben")
+    for s in result.get("skipped_already_final", []):
+        lines.append(f"  ⏭  {s['documentIdent']} übersprungen (bereits Status {s['state']})")
+    if "response" in result:
+        lines.append(f"  Server-Antwort: {result['response']}")
+    return "\n".join(lines)
+
+
 _HUMAN_FORMATTERS = {
     "list-mandants": _fmt_mandators,
     "list-folders": _fmt_folders,
     "list-documents": _fmt_documents,
+    "provide-document": _fmt_provide_document,
     "show-document": _fmt_show_document,
     "belegupload": _fmt_belegupload,
     "download-document": _fmt_download,
@@ -325,6 +337,38 @@ def _cmd_show_document(client: AgendaClient, args: argparse.Namespace) -> dict:
         "mandant": {"id": mandator.id, "number": mandator.number, "name": mandator.name},
         **summary,
     }
+
+
+_FINAL_STATES = {"PROVIDED", "FETCHED", "BOOKED", "DELETED"}
+
+
+def _cmd_provide_document(client: AgendaClient, args: argparse.Namespace) -> dict:
+    mandator = client.find_mandator(args.mandant)
+    folder = client.find_folder(mandator.id, args.folder)
+    idents: list[str] = args.documents
+
+    already_final: list[dict] = []
+    to_forward: list[str] = []
+    for ident in idents:
+        doc = client.get_document(mandator.id, ident)
+        state = doc.get("state")
+        if state in _FINAL_STATES:
+            already_final.append({"documentIdent": ident, "state": state})
+        else:
+            to_forward.append(ident)
+
+    result: dict[str, Any] = {
+        "mandant": {"id": mandator.id, "number": mandator.number, "name": mandator.name},
+        "folder": {"id": folder.id, "name": folder.name},
+        "requested": idents,
+        "skipped_already_final": already_final,
+        "forwarded": [],
+    }
+    if to_forward:
+        response = client.forward_documents(mandator.id, folder.id, to_forward)
+        result["forwarded"] = to_forward
+        result["response"] = response
+    return result
 
 
 def _cmd_list_documents(client: AgendaClient, args: argparse.Namespace) -> dict:
@@ -524,6 +568,28 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     ld.set_defaults(func=_cmd_list_documents)
+
+    # provide-document
+    pd = sub.add_parser(
+        "provide-document",
+        parents=[common],
+        help=(
+            "Bereits hochgeladene(n) Beleg(e) direkt an den Buchhalter "
+            "freigeben (NICHT rueckholbar). ACHTUNG: Endpunkt nur aus dem "
+            "Frontend-JS abgeleitet, NICHT durch eine HAR-Aufnahme bestaetigt "
+            "- vor jedem Einsatz gegen echte Belege bewusst entscheiden."
+        ),
+    )
+    pd.add_argument("--mandant", required=True, help="Mandant: Nummer, Name oder UUID.")
+    pd.add_argument("--folder", required=True, help="Ordner: Name (Teilstring) oder UUID.")
+    pd.add_argument(
+        "--document",
+        dest="documents",
+        required=True,
+        nargs="+",
+        help="Ein oder mehrere documentIdent(s) (siehe list-documents/show-document).",
+    )
+    pd.set_defaults(func=_cmd_provide_document)
 
     # show-document
     sd = sub.add_parser(

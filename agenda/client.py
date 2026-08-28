@@ -275,6 +275,35 @@ class AgendaClient:
         resp.raise_for_status()
         return resp.json()
 
+    # -- Belege gezielt freigeben ("Belege bereitstellen") ------------------
+    # ACHTUNG: NICHT durch eine HAR-Aufnahme bestätigt, nur aus dem
+    # minifizierten DigibelService-JS abgeleitet (2026-08-28):
+    #   forwardDocuments(t,i){let n=i.map(s=>s.id),a=this.prepareUrl()
+    #     .path(t).path("forward-by-ids").param("next-step",PROVIDE_DOCUMENT);
+    #     return this.httpService.post(a,n).pipe(_(s=>s.count))}
+    # -> POST digibel/{mandatorId}/{folderId}/forward-by-ids
+    #      ?next-step=PROVIDE_DOCUMENT   Body: [documentIdent, ...]
+    #      Response vermutlich {"count": N}
+    # Übermittelt die genannten Belege sofort an den Buchhalter - endgültig,
+    # nicht rückholbar (wie --next-step PROVIDE_DOCUMENT beim Upload). Vor
+    # jedem Einsatz gegen echte Belege unbedingt mit dem Nutzer absprechen.
+
+    def forward_documents(
+        self, mandator_id: str, folder_id: str, document_idents: list[str]
+    ) -> dict:
+        """Gibt die genannten Belege direkt an den Buchhalter frei
+        (next-step=PROVIDE_DOCUMENT). NICHT rückholbar."""
+        resp = self.post(
+            f"digibel/{mandator_id}/{folder_id}/forward-by-ids",
+            params={"next-step": "PROVIDE_DOCUMENT"},
+            json=document_idents,
+        )
+        resp.raise_for_status()
+        try:
+            return resp.json()
+        except ValueError:
+            return {"raw": resp.text}
+
 
 def _flatten_folders(nodes: Any, out: Optional[list[Folder]] = None) -> list[Folder]:
     """Wandelt eine (evtl. verschachtelte) Ordnerstruktur in eine flache Liste."""
