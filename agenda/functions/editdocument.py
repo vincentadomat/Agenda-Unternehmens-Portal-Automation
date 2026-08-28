@@ -164,10 +164,11 @@ def run(client: AgendaClient, args) -> dict:
             record["invoiceDate"] = epoch_ms
             changed["accountingRecord.invoiceDate"] = args.invoice_date
 
-    if not changed:
+    if not changed and not args.verify:
         raise ValueError(
             "Keine Änderung angegeben - mindestens ein Feld setzen "
-            "(z. B. --comment, --account, --posting-text, --amount, ...)."
+            "(z. B. --comment, --account, --posting-text, --amount, ...) "
+            "oder --verify, um den Beleg unverändert freizugeben."
         )
 
     # paymentItem-Handling exakt wie im Frontend beobachtet: immer ein Objekt
