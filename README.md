@@ -141,12 +141,19 @@ Locking), überschreibt nur die per Flag angegebenen Felder und schickt das
 volle Dokument zurück (`save-edited-document` erwartet kein partielles Patch).
 Nicht angegebene Felder bleiben unverändert.
 
-**⚠️ `--verify` = endgültiger Freigabe-Schritt (Einschätzung des Nutzers, nicht
-unabhängig live getestet):** Markiert den Beleg als geprüft – er wandert von
-"Prüfen und Zahlen" ins Belegarchiv, wird dem Buchhalter bereitgestellt und ist
-danach **nicht mehr bearbeitbar**. Analog zu `--next-step PROVIDE_DOCUMENT`
-beim Upload: Default bleibt `false` (reines Speichern des Vorschlags), nur
-bewusst mit `--verify` abweichen.
+**`--verify` / `--unverify` – live verifiziert (2026-08-28), korrigiert eine
+frühere Fehlannahme:** `--verify` setzt den Status auf `VERIFIED` ("geprüft"),
+bleibt aber weiterhin im Bereich "Prüfen und Zahlen" – **kein** Freigabe-Schritt,
+der Beleg wird dadurch **nicht** an den Buchhalter übermittelt/ins Belegarchiv
+verschoben. `--unverify` setzt einen so markierten Beleg wieder zurück auf
+`OCR_FINISHED` – im Web-Frontend nicht möglich, über die REST-API aber
+problemlos.
+
+Der tatsächliche Freigabe-Schritt läuft weiterhin nur über
+`--next-step PROVIDE_DOCUMENT` beim **Upload**. Für bereits hochgeladene
+Belege gibt es dafür noch keinen Befehl in diesem Tool – der dafür in Frage
+kommende Endpunkt (`forward-by-ids`) ist nur aus dem Frontend-Code abgeleitet,
+nicht durch eine HAR-Aufnahme bestätigt.
 
 **Live verifiziert (2026-08-28), was auf welchem Beleg-Status funktioniert:**
 

@@ -580,16 +580,27 @@ def build_parser() -> argparse.ArgumentParser:
     ed.add_argument("--cost2", help="Kostenstelle 2 (Buchungsvorschlag).")
     ed.add_argument("--invoice-number", help="Rechnungsnummer (Buchungsvorschlag).")
     ed.add_argument("--invoice-date", help="Rechnungsdatum, Format YYYY-MM-DD.")
-    ed.add_argument(
+    verify_group = ed.add_mutually_exclusive_group()
+    verify_group.add_argument(
         "--verify",
         action="store_true",
         help=(
-            "Markiert den Beleg als geprueft (Einschaetzung des Nutzers, "
-            "nicht unabhaengig live getestet): wandert dann von 'Pruefen "
-            "und Zahlen' ins Belegarchiv, wird dem Buchhalter bereitgestellt "
-            "und ist danach NICHT MEHR BEARBEITBAR - endgueltiger "
-            "Freigabe-Schritt, analog zu --next-step PROVIDE_DOCUMENT. "
-            "Nur bewusst verwenden."
+            "Live verifiziert (2026-08-28): setzt den Status auf VERIFIED "
+            "('geprueft'). Bleibt weiterhin im Bereich 'Pruefen und Zahlen' "
+            "und wird NICHT an den Buchhalter uebermittelt/bereitgestellt - "
+            "das passiert erst ueber --next-step PROVIDE_DOCUMENT beim "
+            "Upload bzw. den (noch nicht implementierten) Freigabe-Schritt "
+            "fuer bereits hochgeladene Belege. Mit --unverify rueckgaengig "
+            "machbar, auch wenn das Web-Frontend das nicht anbietet."
+        ),
+    )
+    verify_group.add_argument(
+        "--unverify",
+        action="store_true",
+        help=(
+            "Setzt einen zuvor mit --verify auf VERIFIED gesetzten Beleg "
+            "live verifiziert (2026-08-28) zurueck auf OCR_FINISHED - auch "
+            "ohne sonstige Feldaenderung. Im Web-Frontend nicht moeglich."
         ),
     )
     ed.set_defaults(func=_cmd_edit_document)

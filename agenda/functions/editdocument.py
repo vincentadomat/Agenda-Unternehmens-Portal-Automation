@@ -27,12 +27,20 @@ Feld-Zuordnung (aus Freitext-Hinweisen in der HAR-Aufnahme bestätigt):
                                       parallel im selben Dokument mit unterschiedlichem
                                       Format, wird hier nur für accountingRecord gesetzt)
 
-`verify` (Query-Parameter): Nach Einschätzung des Nutzers (nicht unabhängig live
-getestet) markiert `verify=true` den Beleg als geprüft - er wandert dann von
-"Prüfen und Zahlen" ins Belegarchiv, wird dem Buchhalter bereitgestellt und ist
-danach NICHT MEHR BEARBEITBAR. Das wäre also der endgültige Freigabe-Schritt,
-analog zu --next-step PROVIDE_DOCUMENT beim Upload. Deshalb Default `False`
-(reines Speichern des Vorschlags), `--verify` nur bewusst und mit Absicht setzen.
+`verify` (Query-Parameter) - live verifiziert (2026-08-28), KORRIGIERT eine
+frühere Fehlannahme: `verify=true` setzt den Status auf `VERIFIED` ("geprüft"),
+bleibt aber weiterhin im Bereich "Prüfen und Zahlen" (VERIFIED gehört zur
+selben Statusgruppe wie OCR_FINISHED/OCR_SKIPPED) und wird NICHT an den
+Buchhalter übermittelt/ins Belegarchiv verschoben. `verify=false` erneut auf
+einen VERIFIED-Beleg gesendet setzt ihn live verifiziert wieder auf
+`OCR_FINISHED` zurück (`--unverify`) - im Web-Frontend nicht möglich, über die
+REST-API aber problemlos. Der tatsächliche Freigabe-Schritt (an den Buchhalter
+übermitteln) läuft weiterhin nur über `--next-step PROVIDE_DOCUMENT` beim
+Upload; für bereits hochgeladene Belege gibt es dafür noch keinen Befehl in
+diesem Tool (Kandidat: `forward-by-ids`, aus dem JS-Code abgeleitet, aber
+NICHT durch eine HAR-Aufnahme bestätigt - siehe agenda-portal-project-status
+Memory für Details, vor Implementierung/Live-Test unbedingt mit dem Nutzer
+absprechen).
 
 Live verifiziert (2026-08-28), was pro Status tatsächlich funktioniert (die
 Web-Oberfläche ist hier keine verlässliche Quelle - sie verbietet mehr, als
@@ -164,11 +172,15 @@ def run(client: AgendaClient, args) -> dict:
             record["invoiceDate"] = epoch_ms
             changed["accountingRecord.invoiceDate"] = args.invoice_date
 
-    if not changed and not args.verify:
+    verify_requested = bool(getattr(args, "verify", False))
+    unverify_requested = bool(getattr(args, "unverify", False))
+
+    if not changed and not verify_requested and not unverify_requested:
         raise ValueError(
             "Keine Änderung angegeben - mindestens ein Feld setzen "
-            "(z. B. --comment, --account, --posting-text, --amount, ...) "
-            "oder --verify, um den Beleg unverändert freizugeben."
+            "(z. B. --comment, --account, --posting-text, --amount, ...), "
+            "--verify (als geprüft markieren) oder --unverify (Prüfung "
+            "zurücknehmen)."
         )
 
     # paymentItem-Handling exakt wie im Frontend beobachtet: immer ein Objekt
@@ -176,14 +188,18 @@ def run(client: AgendaClient, args) -> dict:
     existing_payment_id: Optional[str] = (doc.get("paymentItem") or {}).get("id")
     doc["paymentItem"] = {"id": existing_payment_id} if existing_payment_id else {}
 
-    saved = client.save_edited_document(mandator.id, doc, verify=args.verify)
+    # verify=false ist der Server-Default - wird auch für --unverify genutzt
+    # (setzt einen zuvor mit --verify auf VERIFIED gesetzten Beleg live
+    # verifiziert wieder auf OCR_FINISHED zurück, 2026-08-28).
+    saved = client.save_edited_document(mandator.id, doc, verify=verify_requested)
 
     return {
         "function": "edit-document",
         "mandant": {"id": mandator.id, "number": mandator.number, "name": mandator.name},
         "documentIdent": args.document,
         "changed": changed,
-        "verify": args.verify,
+        "verify": verify_requested,
+        "unverify": unverify_requested,
         "result": {
             "state": saved.get("state"),
             "notice": saved.get("notice"),
