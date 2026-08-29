@@ -28,6 +28,14 @@ CLIENT_ID = "unpmobil"
 REDIRECT_URI = "https://agenda-unternehmens-portal.de/Unternehmensportal/"
 SCOPE = "openid"
 
+# Eigener, erkennbarer User-Agent statt des requests-Library-Defaults
+# ("python-requests/x.y.z") - Transparenz, dass hier ein inoffizielles
+# Automatisierungs-Tool zugreift, kein getarnter Browser/App-Client.
+USER_AGENT = (
+    "agenda-unternehmensportal-automation/0.1 "
+    "(+https://github.com/vincentadomat/Agenda-Unternehmens-Portal-Automation)"
+)
+
 DEFAULT_TOKEN_CACHE = Path.home() / ".cache" / "agenda" / "tokens.json"
 
 

@@ -19,7 +19,7 @@ from typing import Any, Optional
 import requests
 
 from .auth import AuthError, Authenticator
-from .config import Config, PORTAL_BASE
+from .config import Config, PORTAL_BASE, USER_AGENT
 
 
 def _decode_jwt_claims(token: str) -> dict:
@@ -54,6 +54,7 @@ class AgendaClient:
     def __init__(self, config: Config) -> None:
         self.config = config
         self.session = requests.Session()
+        self.session.headers["User-Agent"] = USER_AGENT
         self._auth = Authenticator(config, self.session)
         self._access_token: Optional[str] = None
         self._org_id: Optional[str] = None

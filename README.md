@@ -10,6 +10,11 @@ Ergebnis der Reverse-Engineering-Analyse:
   Realm `kunden`, Client `unpmobil`, Zweitfaktor per **TOTP**.
 - **Upload:** `digibel`-REST-API (Digitaler Beleg).
 
+Das Tool sendet einen eigenen, erkennbaren `User-Agent`
+(`agenda-unternehmensportal-automation/0.1 (+Link zu diesem Repo)`) statt sich
+hinter dem Standard-String der `requests`-Bibliothek zu verstecken – passend
+zur Transparenz-Haltung weiter unten.
+
 ## Installation
 
 ```bash
