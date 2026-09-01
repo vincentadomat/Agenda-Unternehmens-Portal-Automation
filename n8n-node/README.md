@@ -44,7 +44,14 @@ des CLI parst. Das bedeutet:
 
 ## Installation
 
-### 1. Bauen
+### Option A: Fertiges Release nutzen (empfohlen)
+
+Fertig gebautes Tarball von der [Releases-Seite](https://github.com/vincentadomat/Agenda-Unternehmens-Portal-Automation/releases)
+herunterladen (`n8n-nodes-agenda-unternehmensportal-<version>.tgz`) und
+direkt bei Schritt 2 ("In n8n installieren") weitermachen – kein eigenes
+Bauen nötig.
+
+### Option B: Selbst bauen
 
 ```bash
 cd n8n-node
