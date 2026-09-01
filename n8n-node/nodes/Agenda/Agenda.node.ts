@@ -20,12 +20,13 @@ type AgendaCredentials = {
 	username: string;
 	password: string;
 	totpSecret: string;
-	pythonPath: string;
-	projectDir: string;
 };
 
 // Mitgelieferte Python-Umgebung relativ zu dieser (kompilierten) Datei:
 // dist/nodes/Agenda/Agenda.node.js -> drei Ebenen hoch = Paket-Wurzel.
+// Kein Override mehr über die Credentials (die entsprechenden Felder haben
+// live reproduzierbar das Credential-Formular in n8n eingefroren - siehe
+// n8n-node/README.md "Bekannte Probleme"). Immer die gebündelte Umgebung.
 const PACKAGE_ROOT = path.join(__dirname, '..', '..', '..');
 const BUNDLED_PYTHON_DIR = path.join(PACKAGE_ROOT, 'python');
 const BUNDLED_PYTHON_BIN = path.join(BUNDLED_PYTHON_DIR, '.venv', 'bin', 'python');
@@ -35,14 +36,11 @@ async function runAgenda(
 	creds: AgendaCredentials,
 	args: string[],
 ): Promise<IDataObject> {
-	const pythonPath = creds.pythonPath || BUNDLED_PYTHON_BIN;
-	const projectDir = creds.projectDir || BUNDLED_PYTHON_DIR;
-
 	const fullArgs = [...args, '--json'];
 	let stdout = '';
 	try {
-		const result = await execFileAsync(pythonPath, ['-m', 'agenda', ...fullArgs], {
-			cwd: projectDir,
+		const result = await execFileAsync(BUNDLED_PYTHON_BIN, ['-m', 'agenda', ...fullArgs], {
+			cwd: BUNDLED_PYTHON_DIR,
 			env: {
 				...process.env,
 				AGENDA_USERNAME: creds.username,

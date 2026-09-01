@@ -92,13 +92,17 @@ führt `scripts/postinstall.js` aus:
 2. Sucht `python3`, dann `python` im `PATH`.
 3. Legt `python/.venv` an und installiert `python/requirements.txt`
    (`requests`, `pyotp`) darin.
-4. Findet kein System-Python: nur eine Warnung, kein Abbruch – die Node
-   funktioniert dann erst, wenn in den Credentials ein externer
-   Python-Interpreter/Projektverzeichnis eingetragen wird (siehe unten).
+4. Findet kein System-Python: nur eine Warnung, kein Abbruch – ohne venv
+   schlägt dann jede Ausführung der Node mit einem klaren Fehler fehl
+   (`ENOENT`, Pfad zum venv fehlt). In dem Fall das venv manuell unter
+   `<installierte-node>/python/.venv` anlegen (siehe Abschnitt Debugging).
 
 Kein manuelles `git clone` mehr nötig – das Python-Tool ist Teil des
 npm-Pakets (`python/agenda/`, eine Kopie des Hauptprojekt-Codes zum
-Build-Zeitpunkt).
+Build-Zeitpunkt). Der Python-Interpreter/Projektverzeichnis ist fest auf
+diese gebündelte Umgebung verdrahtet, es gibt bewusst keine
+Override-Möglichkeit über die Credentials mehr (siehe "Bekannte Probleme"
+unten, warum).
 
 ## Credentials einrichten
 
@@ -107,10 +111,8 @@ In n8n: **Credentials → New → "Agenda Unternehmensportal"**.
 | Feld | Pflicht | Bedeutung |
 |---|---|---|
 | Benutzername (E-Mail) | ja | Login-Benutzer des Portals |
-| Passwort | ja | Portal-Passwort |
-| TOTP-Secret (Base32) | ja | Wie in Apple Passwords/Authenticator hinterlegt |
-| Python-Interpreter (optional) | nein | Leer lassen für das mitgelieferte venv. Nur setzen, um eine externe agenda-CLI-Installation zu nutzen (z. B. `/opt/Agenda-Unternehmens-Portal-Automation/.venv/bin/python`) |
-| Projektverzeichnis (optional) | nein | Leer lassen für das mitgelieferte `python/`-Verzeichnis im Node-Paket. Nur zusammen mit einem externen Python-Interpreter sinnvoll |
+| Passwort | ja | Portal-Passwort (maskiert dargestellt) |
+| TOTP-Secret (Base32) | ja | Wie in Apple Passwords/Authenticator hinterlegt. **Bewusst als Klartextfeld** (siehe "Bekannte Probleme") |
 
 Die Zugangsdaten werden **nicht** für HTTP-Requests der Node selbst
 verwendet, sondern bei jeder Ausführung als Umgebungsvariablen
@@ -193,6 +195,69 @@ vor Produktiveinsatz lesen:
 
 Ausführliche Herleitung/Live-Test-Nachweise: siehe
 [Haupt-README](../README.md).
+
+## Bekannte Probleme
+
+### Credential-Dialog friert ein bei zwei oder mehr maskierten Feldern
+
+**Live reproduziert am 2026-09-01 gegen n8n 2.30.8 / n8n-workflow 2.30.2.**
+Enthält eine Credential-Definition **zwei oder mehr** Felder mit
+`typeOptions: { password: true }`, friert der Credential-Dialog beim Öffnen
+bzw. bei der ersten Eingabe komplett ein: keine Konsolen-Fehler, keine
+hängenden Netzwerk-Requests, Hintergrund-Telemetrie läuft weiter (der
+Browser-Tab ist also nicht global blockiert) – nur die Formular-Reaktivität
+selbst reagiert nicht mehr, auch Speichern/Abbrechen tut nichts.
+
+Systematisch eingegrenzt (jeweils Node neu bauen/installieren/neu starten
+und im Browser testen):
+
+| Getestete Variante | Ergebnis |
+|---|---|
+| Alle 5 ursprünglichen Felder (inkl. optionaler Python-Pfade, 2× `password`-Typ, `documentationUrl`) | ❌ hängt |
+| Nur 3 Felder (ohne Python-Pfade), weiterhin 2× `password`-Typ | ❌ hängt |
+| 1 einziges einfaches String-Feld (kein `password`-Typ) | ✅ funktioniert |
+| 3 einfache String-Felder, kein `password`-Typ, ohne `documentationUrl` | ✅ funktioniert |
+| 3 Felder, **2×** `password`-Typ, ohne `documentationUrl` | ❌ hängt |
+| 3 Felder, **1×** `password`-Typ, ohne `documentationUrl` | ✅ funktioniert |
+
+→ Der Auslöser ist **die Kombination von zwei oder mehr `typeOptions:
+{ password: true }`-Feldern** in derselben Credential, nicht
+`documentationUrl`, nicht die Feldanzahl an sich, nicht Feldnamen wie
+`password`. Ein einzelnes maskiertes Feld ist unauffällig.
+
+**Workaround (aktuell umgesetzt):** Nur `password` ist maskiert,
+`totpSecret` ist bewusst ein Klartextfeld. Das TOTP-Secret ist zwar auch
+sensibel, aber kurzlebiger nutzbar als das Passwort und wird wie alle
+Credential-Felder von n8n verschlüsselt gespeichert - die Maskierung
+betrifft nur die Bildschirmanzeige, nicht die Speicherung.
+
+**Vermutlich ein n8n-Bug, kein Fehler in dieser Node.** Nicht upstream
+gemeldet/verifiziert. Bei einem n8n-Update prüfen, ob sich das Problem noch
+reproduzieren lässt - falls nicht, könnte `totpSecret` wieder maskiert
+werden.
+
+### Zwischenzeitlich beobachtet, aber nicht die eigentliche Ursache
+
+Während der Diagnose traten zwei weitere, inzwischen aufgeklärte Symptome
+auf, die **nicht** mit dem obigen Bug zusammenhängen und hier nur der
+Vollständigkeit halber festgehalten sind:
+
+- Ein testweise per SQL direkt angelegter/wieder gelöschter Test-Workflow
+  blieb im Browser als "zuletzt geöffnete Ressource" hängen
+  (`useRecentResources.ts`, clientseitig in `localStorage`, nicht in der
+  n8n-Datenbank). Äußerte sich als wiederholte `404`-Requests auf
+  `/rest/workflows/<id>` beim Öffnen der App und - vermutlich, da die App-
+  Initialisierung dadurch blockierte - allgemeine UI-Unresponsivität.
+  Behoben durch "Clear site data" für die n8n-Domain im Browser. **Lehre:**
+  Testdaten nicht per Rohzugriff (SQL) direkt in einer produktiv laufenden
+  n8n-Instanz anlegen/löschen, während eine echte Browser-Session offen sein
+  könnte - lieber über die reguläre API/CLI (`n8n import:workflow` +
+  passendes Cleanup) oder in einer separaten Test-Instanz.
+- Die Node wurde anfangs gegen `n8n-workflow@^1.60.0` (löste zu `1.120.28`
+  auf) gebaut, während die Ziel-n8n-Instanz intern `n8n-workflow@2.30.2`
+  nutzt. Das war zwar eine unabhängig davon sinnvolle Korrektur (jetzt fest
+  auf `2.30.2` gepinnt), hat den Freeze-Bug oben aber **nicht** verursacht
+  und auch nicht behoben.
 
 ## Entwicklung
 
