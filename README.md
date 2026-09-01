@@ -314,3 +314,11 @@ Der Autor garantiert insbesondere nicht:
 Nutzer sind allein dafür verantwortlich zu prüfen, dass die Verwendung dieser
 Software mit allen geltenden Vereinbarungen und rechtlichen Anforderungen
 übereinstimmt.
+
+## Lizenz
+
+Community License Version 1.0 (siehe [`LICENSE`](LICENSE)) – freie
+Nutzung für den persönlichen Gebrauch und interne Geschäftszwecke;
+kommerzielle Weitergabe, Weiterverkauf oder SaaS-Angebote auf Basis dieser
+Software erfordern eine gesonderte Lizenz. Gilt für das gesamte Repository,
+einschließlich [`n8n-node/`](n8n-node/).

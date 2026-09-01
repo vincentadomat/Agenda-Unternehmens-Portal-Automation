@@ -243,6 +243,8 @@ cd n8n-node && npm run build && npm pack
 
 ## Lizenz
 
-MIT, wie das Hauptprojekt. Kein Bezug zur Agenda Software GmbH oder einer
-sonstigen mit "Agenda" verbundenen Firma – siehe Hinweise in der
+Community License Version 1.0 (siehe [`../LICENSE`](../LICENSE)), wie das
+Hauptprojekt – freie interne Nutzung, keine kommerzielle Weitergabe/SaaS ohne
+gesonderte Lizenz. Kein Bezug zum Anbieter des Agenda Unternehmensportals
+oder einer sonstigen mit "Agenda" verbundenen Firma – siehe Hinweise in der
 [Haupt-README](../README.md).

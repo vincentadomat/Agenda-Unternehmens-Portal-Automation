@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "n8n-Node für das Agenda Unternehmensportal (inoffiziell, Reverse-Engineering, siehe Haupt-README)",
   "private": true,
-  "license": "MIT",
+  "license": "SEE LICENSE IN ../LICENSE",
   "files": [
     "dist",
     "python",
