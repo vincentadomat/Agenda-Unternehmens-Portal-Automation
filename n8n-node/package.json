@@ -1,0 +1,31 @@
+{
+  "name": "n8n-nodes-agenda-unternehmensportal",
+  "version": "0.1.0",
+  "description": "n8n-Node für das Agenda Unternehmensportal (inoffiziell, Reverse-Engineering, siehe Haupt-README)",
+  "private": true,
+  "license": "MIT",
+  "files": [
+    "dist",
+    "python",
+    "scripts"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/AgendaApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Agenda/Agenda.node.js"
+    ]
+  },
+  "scripts": {
+    "build": "tsc && cp nodes/Agenda/agenda.svg dist/nodes/Agenda/agenda.svg",
+    "clean": "rm -rf dist",
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "n8n-workflow": "^1.60.0",
+    "typescript": "^5.5.0"
+  }
+}

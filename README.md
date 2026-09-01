@@ -126,16 +126,24 @@ Fehler laufen über stderr), Exit-Code `!= 0` bei Fehlern – ideal zum Parsen.
 
 ## Integration in n8n
 
-Das CLI ist der Integrationspunkt. Zwei Wege:
+Drei Wege, das CLI in n8n zu nutzen:
 
-1. **Execute-Command-Node** (n8n läuft auf demselben Host):
+1. **Dedizierte Node** (empfohlen): [`n8n-node/`](n8n-node/) enthält eine
+   echte n8n-Community-Node ("Agenda Unternehmensportal") mit eigenen
+   Feldern pro Operation (Mandant, Ordner, Beleg-ID, …) statt Rohtext im
+   Execute-Command-Node, inkl. Datei-Ein-/Ausgabe über n8n's Binary-Data.
+   Bündelt das CLI selbst (kein separates Deployment nötig) – Details,
+   Installation und Sicherheitshinweise siehe
+   [n8n-node/README.md](n8n-node/README.md).
+
+2. **Execute-Command-Node** (n8n läuft auf demselben Host):
    ```
    /pfad/.venv/bin/python -m agenda belegupload \
      --mandant {{$json.mandant}} --folder {{$json.folder}} --json {{$json.file}}
    ```
    Die JSON-Ausgabe im Folge-Node parsen.
 
-2. **Webhook → Execute-Command**: n8n-Webhook nimmt `mandant`, `folder` und
+3. **Webhook → Execute-Command**: n8n-Webhook nimmt `mandant`, `folder` und
    Datei(en) entgegen und ruft das CLI auf. So können andere Scripts den Upload
    per HTTP anstoßen und dabei Mandant + Funktion + Ordner übergeben.
 
@@ -258,6 +266,8 @@ agenda/
     belegupload.py       Funktion: Beleg-Upload + notify
     editdocument.py      Funktion: Kommentar + Buchungsvorschlag setzen
   cli.py                 Kommandozeile / Dispatch
+n8n-node/                Dedizierte n8n-Community-Node, bündelt agenda/ als
+                          Python-Subprozess - siehe n8n-node/README.md
 ```
 
 ## Hinweis zur KI-Nutzung
