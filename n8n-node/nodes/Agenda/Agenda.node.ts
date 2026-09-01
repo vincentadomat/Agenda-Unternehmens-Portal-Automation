@@ -141,7 +141,7 @@ export class Agenda implements INodeType {
 				required: true,
 				description: 'Ordnername (Teilstring) oder UUID',
 				displayOptions: {
-					show: { operation: ['listFolders', 'listDocuments', 'uploadDocument', 'provideDocument'] },
+					show: { operation: ['listDocuments', 'uploadDocument', 'provideDocument'] },
 				},
 			},
 
@@ -215,17 +215,6 @@ export class Agenda implements INodeType {
 				type: 'boolean',
 				default: true,
 				displayOptions: { show: { operation: ['uploadDocument'] } },
-			},
-
-			// -- Download-Ziel -----------------------------------------------------
-			{
-				displayName: 'Zielverzeichnis (Host)',
-				name: 'outDir',
-				type: 'string',
-				default: '',
-				description:
-					'Leer lassen, um ein temporäres Verzeichnis zu nutzen und die Datei(en) als Binary-Output zurückzugeben',
-				displayOptions: { show: { operation: ['downloadDocument'] } },
 			},
 
 			// -- edit-document Felder ----------------------------------------------
@@ -414,13 +403,11 @@ export class Agenda implements INodeType {
 					case 'downloadDocument': {
 						const mandant = this.getNodeParameter('mandant', i) as string;
 						const documentIds = splitIds(this.getNodeParameter('documentIds', i) as string);
-						const outDirParam = this.getNodeParameter('outDir', i) as string;
 
-						const useTempDir = !outDirParam;
-						const targetDir = useTempDir
-							? await fs.mkdtemp(path.join(os.tmpdir(), 'agenda-download-'))
-							: outDirParam;
-
+						// Immer über ein temporäres Host-Verzeichnis, das direkt danach
+						// wieder gelöscht wird - Ergebnis geht ausschließlich als
+						// Binary-Output raus, nie als dauerhafter Pfad auf dem Host.
+						const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'agenda-download-'));
 						try {
 							result = await runAgenda(credentials, [
 								'download-document',
@@ -432,21 +419,17 @@ export class Agenda implements INodeType {
 								targetDir,
 							]);
 
-							if (useTempDir) {
-								binary = {};
-								const downloaded = (result.downloaded as IDataObject[]) || [];
-								for (const d of downloaded) {
-									const filePath = d.file as string;
-									const buffer = await fs.readFile(filePath);
-									const key = path.basename(filePath).replace(/[^a-zA-Z0-9_.-]/g, '_');
-									binary[key] = await this.helpers.prepareBinaryData(
-										buffer,
-										path.basename(filePath),
-									);
-								}
+							binary = {};
+							const downloaded = (result.downloaded as IDataObject[]) || [];
+							for (const d of downloaded) {
+								const filePath = d.file as string;
+								const buffer = await fs.readFile(filePath);
+								const key = path.basename(filePath).replace(/[^a-zA-Z0-9_.-]/g, '_');
+								binary[key] = await this.helpers.prepareBinaryData(buffer, path.basename(filePath));
+								delete d.file; // war nur ein temporärer Host-Pfad, bereits gelöscht
 							}
 						} finally {
-							if (useTempDir) await fs.rm(targetDir, { recursive: true, force: true });
+							await fs.rm(targetDir, { recursive: true, force: true });
 						}
 						break;
 					}
